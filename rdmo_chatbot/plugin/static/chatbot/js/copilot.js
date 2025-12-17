@@ -6,6 +6,15 @@ function truncate(string, maxLength = 32) {
   return string.length > maxLength ? string.slice(0, maxLength) + '…' : string;
 }
 
+const getCookie = (name) => {
+  return document.cookie
+    .split(';')
+    .map((cookie) => cookie.trim())
+    .filter((cookie) => cookie.startsWith(`${name}=`))
+    .map((cookie) => decodeURIComponent(cookie.split('=')[1]))
+    .shift()
+}
+
 const getLangCode = async (args) => {
   return language
 }
@@ -156,7 +165,7 @@ const openContactModal = async (args) => {
         body: JSON.stringify(payload),
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRFToken': Cookies.get('csrftoken')
+          'X-CSRFToken': getCookie('csrftoken')
         }
       })
 
