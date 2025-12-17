@@ -207,23 +207,6 @@ window.copilotEventHandler = copilotEventHandler
 
 const observedShadows = new WeakSet()
 
-const patchFileInputs = (shadow) => {
-  const uploadInputs = shadow.querySelectorAll('input[type="file"]')
-
-  // The widget ships with an "*/*" accept attribute which is not valid and
-  // triggers repeated console warnings in Firefox. Normalize it to empty so
-  // the browser falls back to its default handling without warnings. Apply
-  // this to every file input we find, since the widget can re-render the
-  // element when starting a new chat.
-  uploadInputs.forEach((input) => {
-    const accept = input.getAttribute('accept')
-
-    if (accept && accept.includes('*/*')) {
-      input.setAttribute('accept', '')
-    }
-  })
-}
-
 const ensureDialogAccessibility = ({
   container,
   titleText,
@@ -323,12 +306,10 @@ const applyCopilotPatches = () => {
     return
   }
 
-  patchFileInputs(shadow)
   patchNewChatDialog(shadow)
 
   if (!observedShadows.has(shadow)) {
     const shadowObserver = new MutationObserver(() => {
-      patchFileInputs(shadow)
       patchNewChatDialog(shadow)
     })
 
