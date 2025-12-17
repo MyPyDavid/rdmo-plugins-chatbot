@@ -215,14 +215,20 @@ document.addEventListener("DOMContentLoaded", () => {
     const shadow = copilot.shadowRoot
 
     if (shadow) {
-      const uploadInput = shadow.querySelector('input[type="file"]')
+      const uploadInputs = shadow.querySelectorAll('input[type="file"]')
 
       // The widget ships with an "*/*" accept attribute which is not valid and
       // triggers repeated console warnings in Firefox. Normalize it to empty so
-      // the browser falls back to its default handling without warnings.
-      if (uploadInput && uploadInput.getAttribute('accept') === '*/*') {
-        uploadInput.setAttribute('accept', '')
-      }
+      // the browser falls back to its default handling without warnings. Apply
+      // this to every file input we find, since the widget can re-render the
+      // element when starting a new chat.
+      uploadInputs.forEach((input) => {
+        const accept = input.getAttribute('accept')
+
+        if (accept && accept.includes('*/*')) {
+          input.setAttribute('accept', '')
+        }
+      })
     }
 
     const modal = shadow.getElementById("new-chat-dialog")
