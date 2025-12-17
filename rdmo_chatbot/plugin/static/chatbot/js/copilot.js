@@ -205,18 +205,9 @@ const copilotEventHandler = async (event) => {
 
 window.copilotEventHandler = copilotEventHandler
 
-const applyCopilotPatches = () => {
-  const copilot = document.getElementById("chainlit-copilot")
-  if (!copilot) {
-    return
-  }
+const observedShadows = new WeakSet()
 
-  const shadow = copilot.shadowRoot
-
-  if (!shadow) {
-    return
-  }
-
+const patchFileInputs = (shadow) => {
   const uploadInputs = shadow.querySelectorAll('input[type="file"]')
 
   // The widget ships with an "*/*" accept attribute which is not valid and
@@ -231,7 +222,9 @@ const applyCopilotPatches = () => {
       input.setAttribute('accept', '')
     }
   })
+}
 
+const patchNewChatDialog = (shadow) => {
   const modal = shadow.getElementById("new-chat-dialog")
   const confirmButton = shadow.getElementById("confirm")
 
@@ -305,6 +298,32 @@ const applyCopilotPatches = () => {
 
     // attach the listener
     confirmButton.addEventListener("click", handler)
+  }
+}
+
+const applyCopilotPatches = () => {
+  const copilot = document.getElementById("chainlit-copilot")
+  if (!copilot) {
+    return
+  }
+
+  const shadow = copilot.shadowRoot
+
+  if (!shadow) {
+    return
+  }
+
+  patchFileInputs(shadow)
+  patchNewChatDialog(shadow)
+
+  if (!observedShadows.has(shadow)) {
+    const shadowObserver = new MutationObserver(() => {
+      patchFileInputs(shadow)
+      patchNewChatDialog(shadow)
+    })
+
+    shadowObserver.observe(shadow, { childList: true, subtree: true })
+    observedShadows.add(shadow)
   }
 }
 
