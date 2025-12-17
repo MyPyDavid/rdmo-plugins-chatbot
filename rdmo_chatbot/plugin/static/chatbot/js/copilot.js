@@ -224,6 +224,51 @@ const patchFileInputs = (shadow) => {
   })
 }
 
+const ensureDialogAccessibility = ({
+  container,
+  titleText,
+  descriptionText,
+  titleId,
+  descriptionId
+}) => {
+  if (!container) {
+    return
+  }
+
+  const resolvedTitleId = titleId || `${container.id || 'dialog'}-title`
+  const resolvedDescriptionId =
+    descriptionId || `${container.id || 'dialog'}-description`
+
+  if (!container.querySelector(`#${resolvedTitleId}`)) {
+    const dialogTitle = document.createElement('h2')
+    dialogTitle.id = resolvedTitleId
+    dialogTitle.setAttribute('data-radix-dialog-title', '')
+    dialogTitle.textContent = titleText
+    dialogTitle.classList.add('sr-only')
+
+    container.prepend(dialogTitle)
+  }
+
+  if (!container.getAttribute('aria-labelledby')) {
+    container.setAttribute('aria-labelledby', resolvedTitleId)
+  }
+
+  if (descriptionText) {
+    if (!container.querySelector(`#${resolvedDescriptionId}`)) {
+      const dialogDescription = document.createElement('p')
+      dialogDescription.id = resolvedDescriptionId
+      dialogDescription.textContent = descriptionText
+      dialogDescription.classList.add('sr-only')
+
+      container.prepend(dialogDescription)
+    }
+
+    if (!container.getAttribute('aria-describedby')) {
+      container.setAttribute('aria-describedby', resolvedDescriptionId)
+    }
+  }
+}
+
 const patchNewChatDialog = (shadow) => {
   const modal = shadow.getElementById("new-chat-dialog")
   const confirmButton = shadow.getElementById("confirm")
@@ -236,52 +281,15 @@ const patchNewChatDialog = (shadow) => {
     ? modal
     : modal.querySelector?.('[data-radix-dialog-content]') || modal
 
-  const titleId = 'chainlit-new-chat-title'
-
-  if (!content.querySelector('[data-radix-dialog-title]')) {
-    const dialogTitle = document.createElement('h2')
-    dialogTitle.id = titleId
-    dialogTitle.setAttribute('data-radix-dialog-title', '')
-    dialogTitle.textContent = gettext('Start a new chat')
-    dialogTitle.style.position = 'absolute'
-    dialogTitle.style.width = '1px'
-    dialogTitle.style.height = '1px'
-    dialogTitle.style.padding = '0'
-    dialogTitle.style.margin = '-1px'
-    dialogTitle.style.overflow = 'hidden'
-    dialogTitle.style.clip = 'rect(0, 0, 0, 0)'
-    dialogTitle.style.whiteSpace = 'nowrap'
-    dialogTitle.style.border = '0'
-
-    content.prepend(dialogTitle)
-  }
-
-  if (!content.getAttribute('aria-labelledby')) {
-    content.setAttribute('aria-labelledby', titleId)
-  }
-
-  const descriptionId = 'chainlit-new-chat-description'
-
-  if (!content.querySelector(`#${descriptionId}`)) {
-    const dialogDescription = document.createElement('p')
-    dialogDescription.id = descriptionId
-    dialogDescription.textContent = gettext('This will reset the current conversation and start a new chat.')
-    dialogDescription.style.position = 'absolute'
-    dialogDescription.style.width = '1px'
-    dialogDescription.style.height = '1px'
-    dialogDescription.style.padding = '0'
-    dialogDescription.style.margin = '-1px'
-    dialogDescription.style.overflow = 'hidden'
-    dialogDescription.style.clip = 'rect(0, 0, 0, 0)'
-    dialogDescription.style.whiteSpace = 'nowrap'
-    dialogDescription.style.border = '0'
-
-    content.prepend(dialogDescription)
-  }
-
-  if (!content.getAttribute('aria-describedby')) {
-    content.setAttribute('aria-describedby', descriptionId)
-  }
+  ensureDialogAccessibility({
+    container: content,
+    titleText: gettext('Start a new chat'),
+    descriptionText: gettext(
+      'This will reset the current conversation and start a new chat.'
+    ),
+    titleId: 'chainlit-new-chat-title',
+    descriptionId: 'chainlit-new-chat-description'
+  })
 
   if (!confirmButton.dataset.hasHandler) {
     confirmButton.dataset.hasHandler = "true"
