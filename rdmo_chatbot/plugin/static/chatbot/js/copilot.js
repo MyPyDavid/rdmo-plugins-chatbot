@@ -205,84 +205,114 @@ const copilotEventHandler = async (event) => {
 
 window.copilotEventHandler = copilotEventHandler
 
-document.addEventListener("DOMContentLoaded", () => {
-  const observer = new MutationObserver((mutations, obs) => {
-    const copilot = document.getElementById("chainlit-copilot")
-    if (!copilot) {
-      return
-    }
+const applyCopilotPatches = () => {
+  const copilot = document.getElementById("chainlit-copilot")
+  if (!copilot) {
+    return
+  }
 
-    const shadow = copilot.shadowRoot
+  const shadow = copilot.shadowRoot
 
-    if (shadow) {
-      const uploadInputs = shadow.querySelectorAll('input[type="file"]')
+  if (!shadow) {
+    return
+  }
 
-      // The widget ships with an "*/*" accept attribute which is not valid and
-      // triggers repeated console warnings in Firefox. Normalize it to empty so
-      // the browser falls back to its default handling without warnings. Apply
-      // this to every file input we find, since the widget can re-render the
-      // element when starting a new chat.
-      uploadInputs.forEach((input) => {
-        const accept = input.getAttribute('accept')
+  const uploadInputs = shadow.querySelectorAll('input[type="file"]')
 
-        if (accept && accept.includes('*/*')) {
-          input.setAttribute('accept', '')
-        }
-      })
-    }
+  // The widget ships with an "*/*" accept attribute which is not valid and
+  // triggers repeated console warnings in Firefox. Normalize it to empty so
+  // the browser falls back to its default handling without warnings. Apply
+  // this to every file input we find, since the widget can re-render the
+  // element when starting a new chat.
+  uploadInputs.forEach((input) => {
+    const accept = input.getAttribute('accept')
 
-    const modal = shadow.getElementById("new-chat-dialog")
-    const confirmButton = shadow.getElementById("confirm")
-
-    if (modal && confirmButton && !confirmButton.dataset.hasHandler) {
-      const existingTitle = shadow.querySelector('[data-radix-dialog-title], [role="heading"]')
-      const titleId = 'chainlit-new-chat-title'
-
-      if (!existingTitle) {
-        const dialogTitle = document.createElement('h2')
-        dialogTitle.id = titleId
-        dialogTitle.setAttribute('data-radix-dialog-title', '')
-        dialogTitle.textContent = gettext('Start a new chat')
-        dialogTitle.style.position = 'absolute'
-        dialogTitle.style.width = '1px'
-        dialogTitle.style.height = '1px'
-        dialogTitle.style.padding = '0'
-        dialogTitle.style.margin = '-1px'
-        dialogTitle.style.overflow = 'hidden'
-        dialogTitle.style.clip = 'rect(0, 0, 0, 0)'
-        dialogTitle.style.whiteSpace = 'nowrap'
-        dialogTitle.style.border = '0'
-
-        modal.prepend(dialogTitle)
-        modal.setAttribute('aria-labelledby', titleId)
-      }
-
-      const handler = async (event) => {
-        event.stopPropagation()
-
-        window.sendChainlitMessage({
-          type: "system_message",
-          output: "",
-          metadata: {
-            "action": "reset_history",
-            "project": parseInt(projectId)
-          }
-        })
-
-        // remove this listener so we don’t fire again
-        confirmButton.removeEventListener("click", handler)
-
-        // trigger the original click (React handles it)
-        setTimeout(() => confirmButton.click(), 500)
-
-        // mark handler as attached to avoid duplicates
-        confirmButton.dataset.hasHandler = "true"
-      }
-
-      // attach the listener
-      confirmButton.addEventListener("click", handler)
+    if (accept && accept.includes('*/*')) {
+      input.setAttribute('accept', '')
     }
   })
+
+  const modal = shadow.getElementById("new-chat-dialog")
+  const confirmButton = shadow.getElementById("confirm")
+
+  if (modal && confirmButton && !confirmButton.dataset.hasHandler) {
+    const existingTitle = shadow.querySelector('[data-radix-dialog-title], [role="heading"]')
+    const titleId = 'chainlit-new-chat-title'
+
+    if (!existingTitle) {
+      const dialogTitle = document.createElement('h2')
+      dialogTitle.id = titleId
+      dialogTitle.setAttribute('data-radix-dialog-title', '')
+      dialogTitle.textContent = gettext('Start a new chat')
+      dialogTitle.style.position = 'absolute'
+      dialogTitle.style.width = '1px'
+      dialogTitle.style.height = '1px'
+      dialogTitle.style.padding = '0'
+      dialogTitle.style.margin = '-1px'
+      dialogTitle.style.overflow = 'hidden'
+      dialogTitle.style.clip = 'rect(0, 0, 0, 0)'
+      dialogTitle.style.whiteSpace = 'nowrap'
+      dialogTitle.style.border = '0'
+
+      modal.prepend(dialogTitle)
+      modal.setAttribute('aria-labelledby', titleId)
+    }
+
+    const descriptionId = 'chainlit-new-chat-description'
+    const existingDescription = shadow.querySelector(`#${descriptionId}`)
+
+    if (!existingDescription) {
+      const dialogDescription = document.createElement('p')
+      dialogDescription.id = descriptionId
+      dialogDescription.textContent = gettext('This will reset the current conversation and start a new chat.')
+      dialogDescription.style.position = 'absolute'
+      dialogDescription.style.width = '1px'
+      dialogDescription.style.height = '1px'
+      dialogDescription.style.padding = '0'
+      dialogDescription.style.margin = '-1px'
+      dialogDescription.style.overflow = 'hidden'
+      dialogDescription.style.clip = 'rect(0, 0, 0, 0)'
+      dialogDescription.style.whiteSpace = 'nowrap'
+      dialogDescription.style.border = '0'
+
+      modal.prepend(dialogDescription)
+      modal.setAttribute('aria-describedby', descriptionId)
+    } else if (!modal.getAttribute('aria-describedby')) {
+      modal.setAttribute('aria-describedby', descriptionId)
+    }
+
+    const handler = async (event) => {
+      event.stopPropagation()
+
+      window.sendChainlitMessage({
+        type: "system_message",
+        output: "",
+        metadata: {
+          "action": "reset_history",
+          "project": parseInt(projectId)
+        }
+      })
+
+      // remove this listener so we don’t fire again
+      confirmButton.removeEventListener("click", handler)
+
+      // trigger the original click (React handles it)
+      setTimeout(() => confirmButton.click(), 500)
+
+      // mark handler as attached to avoid duplicates
+      confirmButton.dataset.hasHandler = "true"
+    }
+
+    // attach the listener
+    confirmButton.addEventListener("click", handler)
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const observer = new MutationObserver(applyCopilotPatches)
+
+  // Run once in case the widget is already rendered before we start observing.
+  applyCopilotPatches()
 
   observer.observe(document.body, { childList: true, subtree: true })
 });
