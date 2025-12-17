@@ -142,22 +142,34 @@ const openContactModal = async (args) => {
 
   const submitButton = contactModal.querySelector('#chatbot-contact-submit')
 
-  $(submitButton).click(async () => {
-    const payload = {
-      subject: subjectInput.value,
-      message: messageInput.value
-    }
+  $(submitButton).off('click').on('click', async () => {
+    submitButton.disabled = true
 
-    await fetch(url, {
-      method: 'POST',
-      body: JSON.stringify(payload),
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': Cookies.get('csrftoken')
+    try {
+      const payload = {
+        subject: subjectInput.value,
+        message: messageInput.value
       }
-    })
 
-    $(contactModal).modal('hide')
+      const response = await fetch(url, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': Cookies.get('csrftoken')
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error(`Failed to send contact email (${response.status})`)
+      }
+
+      $(contactModal).modal('hide')
+    } catch (error) {
+      console.error(error)
+    } finally {
+      submitButton.disabled = false
+    }
   })
 
   $(contactModal).modal('show')
