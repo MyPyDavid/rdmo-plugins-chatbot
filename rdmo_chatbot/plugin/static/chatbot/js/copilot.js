@@ -228,76 +228,78 @@ const patchNewChatDialog = (shadow) => {
   const modal = shadow.getElementById("new-chat-dialog")
   const confirmButton = shadow.getElementById("confirm")
 
-  if (modal && confirmButton && !confirmButton.dataset.hasHandler) {
-    const existingTitle = shadow.querySelector('[data-radix-dialog-title], [role="heading"]')
-    const titleId = 'chainlit-new-chat-title'
+  if (!modal || !confirmButton) {
+    return
+  }
 
-    if (!existingTitle) {
-      const dialogTitle = document.createElement('h2')
-      dialogTitle.id = titleId
-      dialogTitle.setAttribute('data-radix-dialog-title', '')
-      dialogTitle.textContent = gettext('Start a new chat')
-      dialogTitle.style.position = 'absolute'
-      dialogTitle.style.width = '1px'
-      dialogTitle.style.height = '1px'
-      dialogTitle.style.padding = '0'
-      dialogTitle.style.margin = '-1px'
-      dialogTitle.style.overflow = 'hidden'
-      dialogTitle.style.clip = 'rect(0, 0, 0, 0)'
-      dialogTitle.style.whiteSpace = 'nowrap'
-      dialogTitle.style.border = '0'
+  const content = modal.matches?.('[data-radix-dialog-content]')
+    ? modal
+    : modal.querySelector?.('[data-radix-dialog-content]') || modal
 
-      modal.prepend(dialogTitle)
-      modal.setAttribute('aria-labelledby', titleId)
-    }
+  const titleId = 'chainlit-new-chat-title'
 
-    const descriptionId = 'chainlit-new-chat-description'
-    const existingDescription = shadow.querySelector(`#${descriptionId}`)
+  if (!content.querySelector('[data-radix-dialog-title]')) {
+    const dialogTitle = document.createElement('h2')
+    dialogTitle.id = titleId
+    dialogTitle.setAttribute('data-radix-dialog-title', '')
+    dialogTitle.textContent = gettext('Start a new chat')
+    dialogTitle.style.position = 'absolute'
+    dialogTitle.style.width = '1px'
+    dialogTitle.style.height = '1px'
+    dialogTitle.style.padding = '0'
+    dialogTitle.style.margin = '-1px'
+    dialogTitle.style.overflow = 'hidden'
+    dialogTitle.style.clip = 'rect(0, 0, 0, 0)'
+    dialogTitle.style.whiteSpace = 'nowrap'
+    dialogTitle.style.border = '0'
 
-    if (!existingDescription) {
-      const dialogDescription = document.createElement('p')
-      dialogDescription.id = descriptionId
-      dialogDescription.textContent = gettext('This will reset the current conversation and start a new chat.')
-      dialogDescription.style.position = 'absolute'
-      dialogDescription.style.width = '1px'
-      dialogDescription.style.height = '1px'
-      dialogDescription.style.padding = '0'
-      dialogDescription.style.margin = '-1px'
-      dialogDescription.style.overflow = 'hidden'
-      dialogDescription.style.clip = 'rect(0, 0, 0, 0)'
-      dialogDescription.style.whiteSpace = 'nowrap'
-      dialogDescription.style.border = '0'
+    content.prepend(dialogTitle)
+  }
 
-      modal.prepend(dialogDescription)
-      modal.setAttribute('aria-describedby', descriptionId)
-    } else if (!modal.getAttribute('aria-describedby')) {
-      modal.setAttribute('aria-describedby', descriptionId)
-    }
+  if (!content.getAttribute('aria-labelledby')) {
+    content.setAttribute('aria-labelledby', titleId)
+  }
 
-    const handler = async (event) => {
-      event.stopPropagation()
+  const descriptionId = 'chainlit-new-chat-description'
 
-      window.sendChainlitMessage({
-        type: "system_message",
-        output: "",
-        metadata: {
-          "action": "reset_history",
-          "project": parseInt(projectId)
-        }
-      })
+  if (!content.querySelector(`#${descriptionId}`)) {
+    const dialogDescription = document.createElement('p')
+    dialogDescription.id = descriptionId
+    dialogDescription.textContent = gettext('This will reset the current conversation and start a new chat.')
+    dialogDescription.style.position = 'absolute'
+    dialogDescription.style.width = '1px'
+    dialogDescription.style.height = '1px'
+    dialogDescription.style.padding = '0'
+    dialogDescription.style.margin = '-1px'
+    dialogDescription.style.overflow = 'hidden'
+    dialogDescription.style.clip = 'rect(0, 0, 0, 0)'
+    dialogDescription.style.whiteSpace = 'nowrap'
+    dialogDescription.style.border = '0'
 
-      // remove this listener so we don’t fire again
-      confirmButton.removeEventListener("click", handler)
+    content.prepend(dialogDescription)
+  }
 
-      // trigger the original click (React handles it)
-      setTimeout(() => confirmButton.click(), 500)
+  if (!content.getAttribute('aria-describedby')) {
+    content.setAttribute('aria-describedby', descriptionId)
+  }
 
-      // mark handler as attached to avoid duplicates
-      confirmButton.dataset.hasHandler = "true"
-    }
+  if (!confirmButton.dataset.hasHandler) {
+    confirmButton.dataset.hasHandler = "true"
 
-    // attach the listener
-    confirmButton.addEventListener("click", handler)
+    confirmButton.addEventListener(
+      "click",
+      () => {
+        window.sendChainlitMessage({
+          type: "system_message",
+          output: "",
+          metadata: {
+            action: "reset_history",
+            project: projectId
+          }
+        })
+      },
+      { capture: true }
+    )
   }
 }
 
