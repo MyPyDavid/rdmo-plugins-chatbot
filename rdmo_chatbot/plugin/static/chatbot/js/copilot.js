@@ -229,6 +229,28 @@ document.addEventListener("DOMContentLoaded", () => {
     const confirmButton = shadow.getElementById("confirm")
 
     if (modal && confirmButton && !confirmButton.dataset.hasHandler) {
+      const existingTitle = shadow.querySelector('[data-radix-dialog-title], [role="heading"]')
+      const titleId = 'chainlit-new-chat-title'
+
+      if (!existingTitle) {
+        const dialogTitle = document.createElement('h2')
+        dialogTitle.id = titleId
+        dialogTitle.setAttribute('data-radix-dialog-title', '')
+        dialogTitle.textContent = gettext('Start a new chat')
+        dialogTitle.style.position = 'absolute'
+        dialogTitle.style.width = '1px'
+        dialogTitle.style.height = '1px'
+        dialogTitle.style.padding = '0'
+        dialogTitle.style.margin = '-1px'
+        dialogTitle.style.overflow = 'hidden'
+        dialogTitle.style.clip = 'rect(0, 0, 0, 0)'
+        dialogTitle.style.whiteSpace = 'nowrap'
+        dialogTitle.style.border = '0'
+
+        modal.prepend(dialogTitle)
+        modal.setAttribute('aria-labelledby', titleId)
+      }
+
       const handler = async (event) => {
         event.stopPropagation()
 
