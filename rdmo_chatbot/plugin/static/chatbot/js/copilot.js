@@ -208,7 +208,22 @@ window.copilotEventHandler = copilotEventHandler
 document.addEventListener("DOMContentLoaded", () => {
   const observer = new MutationObserver((mutations, obs) => {
     const copilot = document.getElementById("chainlit-copilot")
+    if (!copilot) {
+      return
+    }
+
     const shadow = copilot.shadowRoot
+
+    if (shadow) {
+      const uploadInput = shadow.querySelector('input[type="file"]')
+
+      // The widget ships with an "*/*" accept attribute which is not valid and
+      // triggers repeated console warnings in Firefox. Normalize it to empty so
+      // the browser falls back to its default handling without warnings.
+      if (uploadInput && uploadInput.getAttribute('accept') === '*/*') {
+        uploadInput.setAttribute('accept', '')
+      }
+    }
 
     const modal = shadow.getElementById("new-chat-dialog")
     const confirmButton = shadow.getElementById("confirm")
