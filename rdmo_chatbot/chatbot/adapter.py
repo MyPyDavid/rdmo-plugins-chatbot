@@ -49,11 +49,23 @@ class LangChainAdapter(BaseAdapter):
             ]
         )
 
-        self.chain = self.prompt | self.llm
-
     @property
     def llm(self):
         raise NotImplementedError
+
+    def get_llm(self, llm_args):
+        raise NotImplementedError
+
+    def build_chain(self, llm):
+        return self.prompt | llm
+
+    def get_llm_args(self):
+        llm_args = dict(config.LLM_ARGS)
+        session_args = cl.user_session.get("llm_config") or {}
+        for key, value in session_args.items():
+            if value:
+                llm_args[key] = value
+        return llm_args
 
     async def on_chat_start(self):
         # get the user from the session
@@ -105,13 +117,16 @@ class LangChainAdapter(BaseAdapter):
         # send an initial empty response
         response_message = await cl.Message(content="").send()
 
+        llm = self.get_llm(self.get_llm_args())
+        chain = self.build_chain(llm)
+
         # stream from or invoke the chain
         if config.STREAM:
-            async for chunk in self.chain.astream(inputs):
+            async for chunk in chain.astream(inputs):
                 if isinstance(chunk, AIMessageChunk):
                     await response_message.stream_token(chunk.content)
         else:
-            response = await self.chain.ainvoke(inputs)
+            response = await chain.ainvoke(inputs)
             response_message.content = response.content
 
         # add the transfer action
@@ -146,6 +161,19 @@ class LangChainAdapter(BaseAdapter):
             user = cl.user_session.get("user")
             project_id = cl.user_session.get("project_id")
             store.reset_history(user.identifier, project_id)
+        elif action == "set_llm_config":
+            try:
+                payload = message.get("payload", {})
+            except AttributeError:
+                payload = message.metadata.get("payload", {})
+            model = payload.get("model")
+            endpoint = payload.get("endpoint")
+            config_values = {
+                "model": model,
+                "openai_api_base": endpoint,
+                "base_url": endpoint
+            }
+            cl.user_session.set("llm_config", config_values)
 
     async def on_transfer(self, action):
         await self.call_copilot("handleTransfer", **action.payload)
@@ -194,13 +222,19 @@ class OpenAILangChainAdapter(LangChainAdapter):
 
     @property
     def llm(self):
+        return self.get_llm(config.LLM_ARGS)
+
+    def get_llm(self, llm_args):
         from langchain_openai import ChatOpenAI
-        return ChatOpenAI(**config.LLM_ARGS)
+        return ChatOpenAI(**llm_args)
 
 
 class OllamaLangChainAdapter(LangChainAdapter):
 
     @property
     def llm(self):
+        return self.get_llm(config.LLM_ARGS)
+
+    def get_llm(self, llm_args):
         from langchain_ollama import ChatOllama
-        return ChatOllama(**config.LLM_ARGS)
+        return ChatOllama(**llm_args)
